@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta name="theme-color" content="#2f5bea">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="부스페이">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>부스페이</title>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <style>
@@ -209,6 +215,47 @@ async function guard(btn, fn) {
   finally { if (btn.isConnected) { btn.disabled = false; btn.textContent = old; } }
 }
 
+/* ---------- 홈 화면 앱 ---------- */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(e => console.warn("sw", e)));
+}
+let installEvt = null;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; });
+window.addEventListener("appinstalled", () => { installEvt = null; toast("홈 화면에 추가됐어요", "ok"); });
+function isStandalone() {
+  return window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+}
+async function showInstallGuide() {
+  const ua = navigator.userAgent;
+  const ios = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  if (inAppBrowser()) {
+    modal(`<h2>📲 홈 화면에 추가하기</h2>
+      <p>지금은 카카오톡·네이버 같은 앱 안에서 열려 있어서 추가할 수 없어요.</p>
+      <ol><li>오른쪽 위(또는 아래) <b>⋮ / 공유</b> 메뉴를 눌러요</li>
+      <li><b>다른 브라우저로 열기</b>를 골라요 (안드로이드: 크롬, 아이폰: 사파리)</li>
+      <li>열린 화면에서 이 버튼을 다시 눌러 주세요</li></ol>
+      <button class="block" onclick="this.closest('.modal').remove()">확인</button>`);
+    return;
+  }
+  if (installEvt) {
+    installEvt.prompt();
+    try { await installEvt.userChoice; } catch {}
+    installEvt = null; return;
+  }
+  modal(ios ? `<h2>📲 아이폰에서 추가하기</h2>
+      <ol><li><b>사파리</b>로 이 주소를 열어요</li>
+      <li>화면 아래(또는 위) <b>공유 버튼</b>(네모에서 화살표가 위로 나온 모양)을 눌러요</li>
+      <li>목록을 내려서 <b>홈 화면에 추가</b>를 누르고, 오른쪽 위 <b>추가</b>를 눌러요</li></ol>
+      <p class="small muted">홈 화면 아이콘으로 처음 열 때 학번과 PIN을 한 번 더 입력해야 해요.</p>
+      <button class="block" onclick="this.closest('.modal').remove()">확인</button>`
+    : `<h2>📲 안드로이드에서 추가하기</h2>
+      <ol><li><b>크롬</b>(또는 삼성 인터넷)으로 이 주소를 열어요</li>
+      <li>오른쪽 위 <b>⋮</b> 메뉴를 눌러요 (삼성 인터넷은 아래쪽 <b>≡</b>)</li>
+      <li><b>앱 설치</b> 또는 <b>홈 화면에 추가</b>를 누르고 <b>설치</b>를 눌러요</li></ol>
+      <p class="small muted">메뉴에 없으면 페이지를 새로고침한 뒤 다시 시도해 주세요.</p>
+      <button class="block" onclick="this.closest('.modal').remove()">확인</button>`);
+}
+
 /* ---------- 라우팅 ---------- */
 let me = null;            // 관리자 정보 {uid, role, name}
 let bootstrapping = false;
@@ -247,8 +294,10 @@ async function showLogin(mode = "student") {
     </div>
     <div class="seg"><button data-m="student">학생</button><button data-m="admin">관리자·부스</button></div>
     <div class="card" id="loginBox"></div>
+    ${isStandalone() ? "" : `<button class="ghost block" id="instBtn">📲 홈 화면에 앱으로 추가하기</button>`}
     <div id="bootBox"></div>
   </div>`;
+  if ($("#instBtn")) $("#instBtn").onclick = showInstallGuide;
   $$(".seg button").forEach(b => { b.classList.toggle("on", b.dataset.m === mode); b.onclick = () => showLogin(b.dataset.m); });
   const box = $("#loginBox");
   if (mode === "student") {
