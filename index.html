@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#2f5bea">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>부스페이</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<style>
+  :root{
+    --bg:#f3f5fa; --card:#fff; --ink:#18203a; --muted:#6b7591; --line:#e2e6f0;
+    --pri:#2f5bea; --pri2:#e8eefe; --ok:#14a05a; --ok2:#e3f6ec; --bad:#d93a3a; --bad2:#fdeaea; --warn:#c77a00;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;font-size:16px}
+  .wrap{max-width:720px;margin:0 auto;padding:14px 14px 80px}
+  header.top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;background:var(--card);
+    border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  header.top h1{font-size:18px;margin:0}
+  header.top .sub{font-size:13px;color:var(--muted)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:12px 0}
+  .card h2{font-size:17px;margin:0 0 12px}
+  .card h3{font-size:15px;margin:14px 0 8px}
+  label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+  input,select,textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font-size:16px;background:#fff;color:var(--ink);font-family:inherit}
+  textarea{min-height:140px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--pri);border-color:transparent}
+  button{font-family:inherit;font-size:16px;border:0;border-radius:12px;padding:13px 16px;cursor:pointer;background:var(--pri);color:#fff;font-weight:600}
+  button:disabled{opacity:.5;cursor:default}
+  button.sec{background:var(--pri2);color:var(--pri)}
+  button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+  button.danger{background:var(--bad)}
+  button.okb{background:var(--ok)}
+  button.sm{padding:8px 12px;font-size:14px;border-radius:9px}
+  button.block{width:100%}
+  .row{display:flex;gap:8px;align-items:center}
+  .row>*{flex:1}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .tabs{display:flex;gap:6px;overflow-x:auto;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:57px;z-index:4}
+  .tabs button{flex:none;background:transparent;color:var(--muted);padding:9px 14px;font-size:15px}
+  .tabs button.on{background:var(--pri2);color:var(--pri)}
+  .seg{display:flex;background:var(--pri2);border-radius:12px;padding:4px;margin-bottom:6px}
+  .seg button{flex:1;background:transparent;color:var(--pri);padding:10px}
+  .seg button.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .muted{color:var(--muted)} .small{font-size:13px}
+  .big{font-size:40px;font-weight:800;letter-spacing:-1px}
+  .mid{font-size:24px;font-weight:700}
+  .center{text-align:center}
+  .balance{background:linear-gradient(135deg,#2f5bea,#5b7cff);color:#fff;border:0}
+  .balance .muted{color:rgba(255,255,255,.8)}
+  .list{list-style:none;margin:0;padding:0}
+  .list li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .list li:last-child{border-bottom:0}
+  .plus{color:var(--ok);font-weight:700} .minus{color:var(--bad);font-weight:700}
+  .tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--pri2);color:var(--pri)}
+  .tag.bad{background:var(--bad2);color:var(--bad)}
+  .qrbox{display:flex;justify-content:center;padding:10px;background:#fff;border-radius:12px}
+  .qrbox svg{width:240px;height:240px}
+  #reader{width:100%;border-radius:12px;overflow:hidden;background:#000}
+  .result{border-radius:16px;padding:28px 16px;text-align:center}
+  .result.ok{background:var(--ok2);color:var(--ok)}
+  .result.bad{background:var(--bad2);color:var(--bad)}
+  .stat{background:var(--bg);border-radius:12px;padding:12px}
+  .stat b{display:block;font-size:20px;margin-top:4px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:9px 6px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;font-size:13px}
+  tr.click{cursor:pointer} tr.click:hover{background:var(--bg)}
+  .progress{height:10px;background:var(--line);border-radius:99px;overflow:hidden;margin:10px 0}
+  .progress div{height:100%;background:var(--pri);width:0;transition:width .2s}
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#18203a;color:#fff;padding:12px 18px;border-radius:12px;
+    font-size:15px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50;max-width:90%;text-align:center}
+  #toast.show{opacity:1} #toast.bad{background:var(--bad)} #toast.ok{background:var(--ok)}
+  .modal{position:fixed;inset:0;background:rgba(10,15,30,.45);display:flex;align-items:flex-end;justify-content:center;z-index:30}
+  .modal .sheet{background:#fff;width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:18px 16px 28px;max-height:90vh;overflow:auto}
+  @media(min-width:600px){.modal{align-items:center}.modal .sheet{border-radius:20px}}
+  .amtbtns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+  .amtbtns button{padding:10px 0;font-size:15px}
+  .amount-input{font-size:30px;font-weight:700;text-align:right}
+  #print{display:none}
+  @media print{
+    body>*:not(#print){display:none!important}
+    #print{display:block}
+    .pcards{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+    .pcard{border:1px dashed #999;padding:8px;text-align:center;page-break-inside:avoid;height:6.4cm}
+    .pcard svg{width:3.6cm;height:3.6cm}
+    .pcard .nm{font-size:15px;font-weight:700}
+    .pcard .pin{font-size:13px;margin-top:2px}
+    .pcard .app{font-size:10px;color:#666}
+  }
+</style>
+</head>
+<body>
+<div id="app"><div class="wrap"><p class="muted center" style="margin-top:40vh">불러오는 중…</p></div></div>
+<div id="toast"></div>
+<div id="print"></div>
+
+<script type="module">
+/* =====================================================================
+   1) 설정 — Firebase 콘솔에서 복사한 값을 아래에 붙여 넣으세요
+   ===================================================================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyAO_zrysGv6MYJ4YW58zKSzvmzDsj17NeE",
+  authDomain: "boothpay-8b489.firebaseapp.com",
+  projectId: "boothpay-8b489",
+  storageBucket: "boothpay-8b489.firebasestorage.app",
+  messagingSenderId: "263602649015",
+  appId: "1:263602649015:web:d6acd26ad637ead8b09a32"
+};
+const APP_NAME = "부스페이";      // 앱 이름
+const UNIT = "코인";              // 화폐 단위
+const PIN_SALT = "bp-df52defe2e8a24964fceeaea"; // 아무 문자열로 바꿔도 됨 (학생 등록 전에만 바꾸세요!)
+const BOOTH_DOMAIN = "booth.example.com"; // 부스 아이디 뒤에 자동으로 붙는 가짜 이메일 주소
+const QUICK_AMOUNTS = [100, 500, 1000, 5000];
+/* ===================================================================== */
+
+import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, getDoc, getDocs, setDoc, deleteDoc, collection, query, where, orderBy, limit,
+  onSnapshot, runTransaction, writeBatch, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+document.title = APP_NAME;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const app = $("#app");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = n => Number(n || 0).toLocaleString("ko-KR");
+const money = n => `${fmt(n)} ${UNIT}`;
+
+let toastTimer;
+function toast(msg, kind = "") {
+  const t = $("#toast");
+  t.textContent = msg; t.className = "show " + kind;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = "", 2600);
+}
+function errMsg(e) {
+  const c = e?.code || "";
+  if (c.includes("permission-denied")) return "권한이 없어요 (보안 규칙 확인)";
+  if (c.includes("unavailable") || c.includes("network")) return "인터넷 연결을 확인해 주세요";
+  if (c.includes("invalid-credential") || c.includes("wrong-password") || c.includes("user-not-found")) return "아이디 또는 비밀번호가 맞지 않아요";
+  if (c.includes("email-already-in-use")) return "이미 있는 아이디예요";
+  if (c.includes("weak-password")) return "비밀번호는 6자 이상이어야 해요";
+  if (c.includes("too-many-requests")) return "시도가 너무 많아요. 잠시 후 다시 해 주세요";
+  if (c.includes("invalid-email")) return "아이디 형식이 올바르지 않아요";
+  return e?.message || String(e);
+}
+
+if (!firebaseConfig.projectId) {
+  app.innerHTML = `<div class="wrap"><div class="card"><h2>설정이 필요해요</h2>
+  <p>index.html 파일 위쪽의 <b>firebaseConfig</b>에 Firebase 설정값을 붙여 넣어 주세요. 자세한 방법은 설치 가이드를 보세요.</p></div></div>`;
+  throw new Error("firebaseConfig missing");
+}
+
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
+
+/* ---------- 공통 유틸 ---------- */
+const ALPH = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function randToken(n = 20) {
+  const a = new Uint32Array(n); crypto.getRandomValues(a);
+  return [...a].map(x => ALPH[x % ALPH.length]).join("");
+}
+function randPin() {
+  const a = new Uint32Array(1); crypto.getRandomValues(a);
+  return String(a[0] % 10000).padStart(4, "0");
+}
+async function sha256(str) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+const loginKey = (sid, pin) => sha256(`${String(sid).trim()}:${String(pin).trim()}:${PIN_SALT}`);
+const qrText = token => "BP:" + token;
+const parseQr = text => { const t = String(text).trim(); return t.startsWith("BP:") ? t.slice(3) : t; };
+function qrSvg(text, cell = 6) {
+  const q = qrcode(0, "M"); q.addData(text); q.make();
+  return q.createSvgTag({ cellSize: cell, margin: 2, scalable: true });
+}
+function pushRecent(recent, item) { return [item, ...(Array.isArray(recent) ? recent : [])].slice(0, 30); }
+function tsText(ts) {
+  const d = ts?.toDate ? ts.toDate() : (typeof ts === "number" ? new Date(ts) : new Date());
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+function toInt(v) { const n = Math.floor(Number(String(v).replace(/[^\d-]/g, ""))); return Number.isFinite(n) ? n : 0; }
+function download(name, text, type = "text/csv;charset=utf-8") {
+  const blob = new Blob(["﻿" + text], { type });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+const csvCell = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+
+let subs = [];
+function cleanup() { subs.forEach(u => { try { u(); } catch {} }); subs = []; stopScanner(); }
+function modal(html) {
+  const m = document.createElement("div"); m.className = "modal";
+  m.innerHTML = `<div class="sheet">${html}</div>`;
+  m.addEventListener("click", e => { if (e.target === m) m.remove(); });
+  document.body.appendChild(m); return m;
+}
+async function guard(btn, fn) {
+  if (btn.disabled) return;
+  const old = btn.textContent; btn.disabled = true; btn.textContent = "처리 중…";
+  try { await fn(); } catch (e) { console.error(e); toast(errMsg(e), "bad"); }
+  finally { if (btn.isConnected) { btn.disabled = false; btn.textContent = old; } }
+}
+
+/* ---------- 라우팅 ---------- */
+let me = null;            // 관리자 정보 {uid, role, name}
+let bootstrapping = false;
+
+onAuthStateChanged(auth, () => { if (!bootstrapping) route(); });
+
+async function route() {
+  cleanup();
+  const token = localStorage.getItem("bp_token");
+  const user = auth.currentUser;
+  if (user) {
+    try {
+      const a = await getDoc(doc(db, "admins", user.uid));
+      if (a.exists()) {
+        me = { uid: user.uid, ...a.data() };
+        return me.role === "master" ? showMaster() : showBooth();
+      }
+      await signOut(auth);
+      toast("관리자 권한이 없는 계정이에요", "bad");
+    } catch (e) { toast(errMsg(e), "bad"); }
+  }
+  if (token) return showStudent(token);
+  showLogin();
+}
+
+/* =====================================================================
+   로그인 화면
+   ===================================================================== */
+async function showLogin(mode = "student") {
+  cleanup();
+  app.innerHTML = `
+  <div class="wrap" style="max-width:440px;padding-top:40px">
+    <div class="center" style="margin-bottom:18px">
+      <div class="big" style="font-size:32px">💳 ${esc(APP_NAME)}</div>
+      <div class="muted">학교 부스 전용 화폐</div>
+    </div>
+    <div class="seg"><button data-m="student">학생</button><button data-m="admin">관리자·부스</button></div>
+    <div class="card" id="loginBox"></div>
+    <div id="bootBox"></div>
+  </div>`;
+  $$(".seg button").forEach(b => { b.classList.toggle("on", b.dataset.m === mode); b.onclick = () => showLogin(b.dataset.m); });
+  const box = $("#loginBox");
+  if (mode === "student") {
+    box.innerHTML = `
+      <label>학번</label><input id="sid" inputmode="numeric" autocomplete="username" placeholder="예: 30101">
+      <label>PIN (4자리)</label><input id="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="current-password" placeholder="••••">
+      <button class="block" id="go" style="margin-top:16px">내 지갑 열기</button>`;
+    $("#go").onclick = e => guard(e.target, studentLogin);
+    $("#pin").onkeydown = e => { if (e.key === "Enter") $("#go").click(); };
+  } else {
+    box.innerHTML = `
+      <label>아이디 (부스 아이디 또는 이메일)</label><input id="em" autocomplete="username" placeholder="예: booth1">
+      <label>비밀번호</label><input id="pw" type="password" autocomplete="current-password">
+      <button class="block" id="go" style="margin-top:16px">로그인</button>`;
+    $("#go").onclick = e => guard(e.target, async () => {
+      const id = $("#em").value.trim(); const em = id.includes("@") ? id : `${id}@${BOOTH_DOMAIN}`;
+      await signInWithEmailAndPassword(auth, em, $("#pw").value);
+    });
+    $("#pw").onkeydown = e => { if (e.key === "Enter") $("#go").click(); };
+    try {
+      const owner = await getDoc(doc(db, "config", "owner"));
+      if (!owner.exists()) renderBootstrap();
+    } catch (e) { console.warn(e); }
+  }
+}
+
+let failCount = 0, lockUntil = 0;
+async function studentLogin() {
+  if (Date.now() < lockUntil) throw new Error(`잠시 후 다시 시도해 주세요 (${Math.ceil((lockUntil - Date.now()) / 1000)}초)`);
+  const sid = $("#sid").value.trim(), pin = $("#pin").value.trim();
+  if (!sid || !/^\d{4}$/.test(pin)) throw new Error("학번과 4자리 PIN을 입력해 주세요");
+  const s = await getDoc(doc(db, "logins", await loginKey(sid, pin)));
+  if (!s.exists()) {
+    if (++failCount >= 5) { lockUntil = Date.now() + 30000; failCount = 0; }
+    throw new Error("학번 또는 PIN이 맞지 않아요");
+  }
+  localStorage.setItem("bp_token", s.data().token);
+  showStudent(s.data().token);
+}
+
+function renderBootstrap() {
+  $("#bootBox").innerHTML = `
+  <div class="card" style="border-color:var(--warn)">
+    <h2>🔑 최초 관리자(선생님) 계정 만들기</h2>
+    <p class="small muted">아직 관리자가 없어요. 배포 직후 선생님이 가장 먼저 만들어 주세요. 한 번 만들면 이 칸은 사라져요.</p>
+    <label>이메일</label><input id="bem" type="email" placeholder="teacher@school.kr">
+    <label>비밀번호 (6자 이상)</label><input id="bpw" type="password">
+    <label>표시 이름</label><input id="bnm" placeholder="예: 운영본부">
+    <button class="block okb" id="bgo" style="margin-top:14px">최초 관리자 등록</button>
+  </div>`;
+  $("#bgo").onclick = e => guard(e.target, async () => {
+    const em = $("#bem").value.trim(), pw = $("#bpw").value, nm = $("#bnm").value.trim() || "운영본부";
+    bootstrapping = true;
+    try {
+      let cred;
+      try { cred = await createUserWithEmailAndPassword(auth, em, pw); }
+      catch (err) { if (String(err.code).includes("email-already-in-use")) cred = await signInWithEmailAndPassword(auth, em, pw); else throw err; }
+      const uid = cred.user.uid;
+      const b = writeBatch(db);
+      b.set(doc(db, "admins", uid), { role: "master", name: nm, email: em, createdAt: serverTimestamp() });
+      b.set(doc(db, "config", "owner"), { uid, at: serverTimestamp() });
+      await b.commit();
+      toast("관리자로 등록됐어요", "ok");
+    } finally { bootstrapping = false; route(); }
+  });
+}
+
+/* =====================================================================
+   학생 화면
+   ===================================================================== */
+function showStudent(token) {
+  cleanup();
+  app.innerHTML = `
+  <header class="top"><div><h1>💳 ${esc(APP_NAME)}</h1><div class="sub" id="who"></div></div>
+    <button class="ghost sm" id="out">로그아웃</button></header>
+  <div class="wrap">
+    <div class="card balance center"><div class="muted">내 잔액</div><div class="big" id="bal">…</div></div>
+    <div class="card center"><h2>결제 QR</h2><div class="qrbox" id="qr"></div>
+      <p class="small muted">부스에서 이 QR을 보여 주세요. 화면 밝기를 올리면 더 잘 찍혀요.<br>QR을 친구에게 보여 주거나 캡처해서 공유하지 마세요.</p></div>
+    <div class="card"><h2>최근 내역</h2><ul class="list" id="hist"></ul></div>
+  </div>`;
+  $("#out").onclick = () => { localStorage.removeItem("bp_token"); showLogin(); };
+  $("#qr").innerHTML = qrSvg(qrText(token));
+  subs.push(onSnapshot(doc(db, "wallets", token), s => {
+    if (!s.exists()) { localStorage.removeItem("bp_token"); toast("지갑 정보가 없어요. 다시 로그인해 주세요", "bad"); return showLogin(); }
+    const w = s.data();
+    $("#who").textContent = `${w.sid} ${w.name}`;
+    $("#bal").textContent = money(w.balance);
+    const r = w.recent || [];
+    $("#hist").innerHTML = r.length ? r.map(x => `<li><div><div>${esc(x.b || "")}${x.m ? ` · <span class="muted">${esc(x.m)}</span>` : ""}</div>
+      <div class="small muted">${tsText(x.t)}</div></div><div class="${x.a >= 0 ? "plus" : "minus"}">${x.a >= 0 ? "+" : ""}${fmt(x.a)}</div></li>`).join("")
+      : `<li class="muted">아직 내역이 없어요</li>`;
+  }, e => toast(errMsg(e), "bad")));
+}
+
+/* =====================================================================
+   결제 (부스·관리자 공용)
+   ===================================================================== */
+async function payTx(token, amount, memo) {
+  const wref = doc(db, "wallets", token);
+  const lref = doc(collection(db, "ledger"));
+  return runTransaction(db, async t => {
+    const ws = await t.get(wref);
+    if (!ws.exists()) throw new Error("등록되지 않은 지갑이에요");
+    const w = ws.data();
+    if (w.balance < amount) throw new Error(`잔액이 부족해요 (현재 ${money(w.balance)})`);
+    const nb = w.balance - amount;
+    t.set(lref, { type: "pay", wallet: token, sid: w.sid, name: w.name, amount, by: me.uid, byName: me.name,
+      memo, cancelled: false, balanceAfter: nb, at: serverTimestamp() });
+    t.update(wref, { balance: nb, lastTx: lref.id, updatedAt: serverTimestamp(),
+      recent: pushRecent(w.recent, { t: Date.now(), a: -amount, b: me.name, m: memo }) });
+    return { nb, name: w.name, sid: w.sid };
+  });
+}
+
+async function cancelTx(ledgerId) {
+  const lref = doc(db, "ledger", ledgerId);
+  return runTransaction(db, async t => {
+    const ls = await t.get(lref);
+    if (!ls.exists()) throw new Error("내역을 찾을 수 없어요");
+    const L = ls.data();
+    if (L.cancelled) throw new Error("이미 취소된 결제예요");
+    if (L.type !== "pay") throw new Error("결제 내역만 취소할 수 있어요");
+    const wref = doc(db, "wallets", L.wallet);
+    const ws = await t.get(wref);
+    if (!ws.exists()) throw new Error("지갑이 삭제되어 취소할 수 없어요");
+    const w = ws.data();
+    t.update(lref, { cancelled: true, cancelledAt: serverTimestamp() });
+    t.update(wref, { balance: w.balance + L.amount, lastTx: ledgerId, updatedAt: serverTimestamp(),
+      recent: pushRecent(w.recent, { t: Date.now(), a: L.amount, b: L.byName, m: "결제 취소" }) });
+  });
+}
+
+/* 관리자 지급/차감 (delta: +지급, -차감) */
+async function adjustTx(token, delta, memo) {
+  const wref = doc(db, "wallets", token);
+  const lref = doc(collection(db, "ledger"));
+  return runTransaction(db, async t => {
+    const ws = await t.get(wref);
+    if (!ws.exists()) throw new Error("지갑 없음");
+    const w = ws.data();
+    const nb = w.balance + delta;
+    if (nb < 0) throw new Error(`${w.sid} ${w.name}: 잔액 부족`);
+    t.set(lref, { type: delta >= 0 ? "deposit" : "withdraw", wallet: token, sid: w.sid, name: w.name, amount: Math.abs(delta),
+      by: me.uid, byName: me.name, memo, cancelled: false, balanceAfter: nb, at: serverTimestamp() });
+    t.update(wref, { balance: nb, lastTx: lref.id, updatedAt: serverTimestamp(),
+      recent: pushRecent(w.recent, { t: Date.now(), a: delta, b: delta >= 0 ? "지급" : "차감", m: memo }) });
+    return nb;
+  });
+}
+
+/* ---------- QR 스캐너 ---------- */
+let scanner = null;
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    if ([...document.scripts].some(s => s.src === src)) return res();
+    const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("스캐너를 불러오지 못했어요"));
+    document.head.appendChild(s);
+  });
+}
+async function startScanner(el, onText) {
+  await loadScript("https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js");
+  await stopScanner();
+  scanner = new Html5Qrcode(el.id);
+  let fired = false;
+  await scanner.start({ facingMode: "environment" }, { fps: 12, qrbox: { width: 230, height: 230 } }, txt => {
+    if (fired) return; fired = true;
+    if (navigator.vibrate) navigator.vibrate(60);
+    stopScanner().then(() => onText(txt));
+  }, () => {});
+}
+async function stopScanner() {
+  const s = scanner; scanner = null;
+  if (s) { try { await s.stop(); } catch {} try { s.clear(); } catch {} }
+}
+
+function renderPayPanel(root) {
+  root.innerHTML = `
+    <div class="card" id="payStep">
+      <h2>결제할 학생 찾기</h2>
+      <button class="block" id="scanBtn">📷 QR 스캔</button>
+      <div id="reader" style="margin-top:10px"></div>
+      <h3>QR이 없을 때 — 학번 + PIN</h3>
+      <div class="row"><input id="msid" inputmode="numeric" placeholder="학번"><input id="mpin" type="password" inputmode="numeric" maxlength="4" placeholder="PIN"></div>
+      <button class="block sec" id="manBtn" style="margin-top:8px">학번으로 찾기</button>
+    </div>`;
+  $("#scanBtn").onclick = async e => {
+    if (scanner) { await stopScanner(); e.target.textContent = "📷 QR 스캔"; return; }
+    e.target.textContent = "스캔 중지";
+    try { await startScanner($("#reader"), txt => openPay(root, parseQr(txt))); }
+    catch (err) { e.target.textContent = "📷 QR 스캔"; toast("카메라를 열 수 없어요. 권한·HTTPS 주소인지 확인해 주세요", "bad"); console.error(err); }
+  };
+  $("#manBtn").onclick = e => guard(e.target, async () => {
+    const sid = $("#msid").value.trim(), pin = $("#mpin").value.trim();
+    if (!sid || !/^\d{4}$/.test(pin)) throw new Error("학번과 4자리 PIN을 입력해 주세요");
+    const s = await getDoc(doc(db, "logins", await loginKey(sid, pin)));
+    if (!s.exists()) throw new Error("학번 또는 PIN이 맞지 않아요");
+    openPay(root, s.data().token);
+  });
+}
+
+async function openPay(root, token) {
+  let w;
+  try {
+    const s = await getDoc(doc(db, "wallets", token));
+    if (!s.exists()) { toast("등록되지 않은 QR이에요", "bad"); return renderPayPanel(root); }
+    w = s.data();
+  } catch (e) { toast(errMsg(e), "bad"); return renderPayPanel(root); }
+  root.innerHTML = `
+    <div class="card">
+      <div class="row" style="align-items:flex-start">
+        <div><div class="mid">${esc(w.name)}</div><div class="muted">${esc(w.sid)}</div></div>
+        <div style="text-align:right"><div class="small muted">잔액</div><div class="mid">${money(w.balance)}</div></div>
+      </div>
+      <label>결제 금액</label>
+      <input id="amt" class="amount-input" inputmode="numeric" placeholder="0">
+      <div class="amtbtns">${QUICK_AMOUNTS.map(a => `<button class="sec" data-a="${a}">+${fmt(a)}</button>`).join("")}</div>
+      <label>메모 (선택)</label><input id="memo" placeholder="예: 떡볶이 1개" maxlength="40">
+      <div class="row" style="margin-top:16px"><button class="ghost" id="back">취소</button><button class="okb" id="doPay" style="flex:2">결제하기</button></div>
+    </div>`;
+  const amt = $("#amt");
+  amt.oninput = () => { const v = toInt(amt.value); amt.value = v ? fmt(v) : ""; };
+  $$(".amtbtns button").forEach(b => b.onclick = () => { amt.value = fmt(toInt(amt.value) + Number(b.dataset.a)); });
+  $("#back").onclick = () => renderPayPanel(root);
+  $("#doPay").onclick = e => guard(e.target, async () => {
+    const a = toInt(amt.value);
+    if (a <= 0) throw new Error("금액을 입력해 주세요");
+    if (a > 1000000) throw new Error("금액이 너무 커요");
+    const memo = $("#memo").value.trim();
+    try {
+      const r = await payTx(token, a, memo);
+      root.innerHTML = `<div class="result ok"><div style="font-size:54px">✓</div><div class="mid">결제 완료</div>
+        <p style="font-size:18px;margin:10px 0">${esc(r.sid)} ${esc(r.name)}<br><b>-${money(a)}</b></p>
+        <div class="muted">남은 잔액 ${money(r.nb)}</div></div><button class="block" id="next" style="margin-top:12px">다음 결제</button>`;
+    } catch (err) {
+      root.innerHTML = `<div class="result bad"><div style="font-size:54px">✕</div><div class="mid">결제 실패</div>
+        <p>${esc(errMsg(err))}</p></div><button class="block" id="next" style="margin-top:12px">돌아가기</button>`;
+    }
+    $("#next").onclick = () => renderPayPanel(root);
+  });
+  amt.focus();
+}
+
+function renderSales(root, uid) {
+  root.innerHTML = `<div class="card"><div class="grid2">
+      <div class="stat"><span class="small muted">총 매출</span><b id="sTot">-</b></div>
+      <div class="stat"><span class="small muted">결제 건수</span><b id="sCnt">-</b></div></div></div>
+    <div class="card"><h2>판매 내역</h2><ul class="list" id="sList"><li class="muted">불러오는 중…</li></ul></div>`;
+  const q = query(collection(db, "ledger"), where("by", "==", uid));
+  subs.push(onSnapshot(q, snap => {
+    const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.at?.toMillis?.() ?? Date.now()) - (a.at?.toMillis?.() ?? Date.now()));
+    const pays = rows.filter(r => r.type === "pay");
+    const ok = pays.filter(r => !r.cancelled);
+    $("#sTot").textContent = money(ok.reduce((s, r) => s + r.amount, 0));
+    $("#sCnt").textContent = `${ok.length}건`;
+    $("#sList").innerHTML = pays.length ? pays.map(r => `<li><div><div>${esc(r.sid)} ${esc(r.name)} ${r.cancelled ? `<span class="tag bad">취소됨</span>` : ""}</div>
+      <div class="small muted">${tsText(r.at)}${r.memo ? " · " + esc(r.memo) : ""}</div></div>
+      <div class="row" style="flex:none;gap:8px"><span class="minus" style="${r.cancelled ? "text-decoration:line-through;opacity:.5" : ""}">${fmt(r.amount)}</span>
+      ${r.cancelled ? "" : `<button class="ghost sm" data-c="${r.id}">취소</button>`}</div></li>`).join("")
+      : `<li class="muted">아직 결제가 없어요</li>`;
+    $$("[data-c]", root).forEach(b => b.onclick = () => {
+      if (!confirm("이 결제를 취소하고 학생에게 돌려줄까요?")) return;
+      guard(b, async () => { await cancelTx(b.dataset.c); toast("결제를 취소했어요", "ok"); });
+    });
+  }, e => toast(errMsg(e), "bad")));
+}
+
+/* =====================================================================
+   부스 화면
+   ===================================================================== */
+function showBooth(tab = "pay") {
+  cleanup();
+  app.innerHTML = `
+  <header class="top"><div><h1>🏪 ${esc(me.name)}</h1><div class="sub">${esc(APP_NAME)} 부스</div></div>
+    <button class="ghost sm" id="out">로그아웃</button></header>
+  <nav class="tabs"><button data-t="pay">결제</button><button data-t="sales">판매 내역</button></nav>
+  <div class="wrap" id="main"></div>`;
+  $("#out").onclick = () => { if (confirm("로그아웃할까요?")) signOut(auth); };
+  $$(".tabs button").forEach(b => { b.classList.toggle("on", b.dataset.t === tab); b.onclick = () => showBooth(b.dataset.t); });
+  if (tab === "pay") renderPayPanel($("#main")); else renderSales($("#main"), me.uid);
+}
+
+/* =====================================================================
+   관리자(선생님) 화면
+   ===================================================================== */
+let wallets = null; // 캐시
+async function loadWallets(force = false) {
+  if (wallets && !force) return wallets;
+  const snap = await getDocs(collection(db, "wallets"));
+  wallets = snap.docs.map(d => ({ token: d.id, ...d.data() })).sort((a, b) => String(a.sid).localeCompare(String(b.sid), "ko", { numeric: true }));
+  return wallets;
+}
+
+function showMaster(tab = "home") {
+  cleanup();
+  app.innerHTML = `
+  <header class="top"><div><h1>🛠 ${esc(APP_NAME)} 관리</h1><div class="sub">${esc(me.name)}</div></div>
+    <button class="ghost sm" id="out">로그아웃</button></header>
+  <nav class="tabs">
+    <button data-t="home">현황</button><button data-t="students">학생</button><button data-t="give">일괄 지급</button>
+    <button data-t="booths">부스 계정</button><button data-t="print">카드 인쇄</button><button data-t="pay">결제</button><button data-t="sales">내 판매</button>
+  </nav>
+  <div class="wrap" id="main"></div>`;
+  $("#out").onclick = () => { if (confirm("로그아웃할까요?")) signOut(auth); };
+  $$(".tabs button").forEach(b => { b.classList.toggle("on", b.dataset.t === tab); b.onclick = () => showMaster(b.dataset.t); });
+  const main = $("#main");
+  ({ home: mHome, students: mStudents, give: mGive, booths: mBooths, print: mPrint,
+     pay: r => renderPayPanel(r), sales: r => renderSales(r, me.uid) })[tab](main);
+}
+
+/* ---- 현황 ---- */
+async function mHome(root) {
+  root.innerHTML = `
+    <div class="card"><div class="grid3">
+      <div class="stat"><span class="small muted">등록 인원</span><b id="hN">-</b></div>
+      <div class="stat"><span class="small muted">유통 중 잔액</span><b id="hSum">-</b></div>
+      <div class="stat"><span class="small muted">평균 잔액</span><b id="hAvg">-</b></div></div>
+      <button class="ghost sm" id="hRef" style="margin-top:10px">새로고침</button></div>
+    <div class="card"><h2>부스별 매출 집계</h2><div id="agg" class="small muted">버튼을 누르면 전체 거래를 집계해요 (거래 수만큼 읽기 사용량이 들어요)</div>
+      <div class="row" style="margin-top:10px"><button class="sec" id="aggBtn">집계하기</button><button class="ghost" id="csvBtn">전체 내역 CSV</button></div></div>
+    <div class="card"><h2>실시간 최근 거래</h2><ul class="list" id="live"><li class="muted">불러오는 중…</li></ul></div>`;
+  const fill = ws => {
+    const sum = ws.reduce((s, w) => s + (w.balance || 0), 0);
+    $("#hN").textContent = `${ws.length}명`; $("#hSum").textContent = fmt(sum); $("#hAvg").textContent = ws.length ? fmt(Math.round(sum / ws.length)) : "0";
+  };
+  $("#hRef").onclick = e => guard(e.target, async () => fill(await loadWallets(true)));
+  loadWallets().then(fill).catch(e => toast(errMsg(e), "bad"));
+  const typeName = { pay: "결제", deposit: "지급", withdraw: "차감" };
+  subs.push(onSnapshot(query(collection(db, "ledger"), orderBy("at", "desc"), limit(30)), snap => {
+    $("#live").innerHTML = snap.empty ? `<li class="muted">거래가 없어요</li>` : snap.docs.map(d => { const r = d.data();
+      return `<li><div><div>${esc(r.sid)} ${esc(r.name)} <span class="tag">${typeName[r.type] || r.type}</span> ${r.cancelled ? `<span class="tag bad">취소</span>` : ""}</div>
+      <div class="small muted">${tsText(r.at)} · ${esc(r.byName)}${r.memo ? " · " + esc(r.memo) : ""}</div></div>
+      <div class="${r.type === "deposit" ? "plus" : "minus"}">${r.type === "deposit" ? "+" : "-"}${fmt(r.amount)}</div></li>`; }).join("");
+  }, e => toast(errMsg(e), "bad")));
+  const allLedger = async () => (await getDocs(collection(db, "ledger"))).docs.map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.at?.toMillis?.() ?? 0) - (b.at?.toMillis?.() ?? 0));
+  $("#aggBtn").onclick = e => guard(e.target, async () => {
+    const rows = await allLedger(); const by = {}; let dep = 0, wd = 0;
+    for (const r of rows) {
+      if (r.type === "deposit") dep += r.amount; else if (r.type === "withdraw") wd += r.amount;
+      else if (r.type === "pay" && !r.cancelled) { by[r.byName] ??= { s: 0, n: 0 }; by[r.byName].s += r.amount; by[r.byName].n++; }
+    }
+    const list = Object.entries(by).sort((a, b) => b[1].s - a[1].s);
+    const totalPay = list.reduce((s, [, v]) => s + v.s, 0);
+    $("#agg").innerHTML = `<table><tr><th>부스</th><th>건수</th><th>매출</th></tr>
+      ${list.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${v.n}</td><td>${fmt(v.s)}</td></tr>`).join("")}
+      <tr><th>합계</th><th>${list.reduce((s, [, v]) => s + v.n, 0)}</th><th>${fmt(totalPay)}</th></tr></table>
+      <p class="small">총 지급 ${fmt(dep)} · 총 차감 ${fmt(wd)} · 총 결제 ${fmt(totalPay)} → 계산상 잔액 ${fmt(dep - wd - totalPay)}</p>`;
+  });
+  $("#csvBtn").onclick = e => guard(e.target, async () => {
+    const rows = await allLedger();
+    const head = ["시각", "종류", "학번", "이름", "금액", "처리자", "메모", "취소", "거래후잔액"];
+    const lines = rows.map(r => [r.at?.toDate?.().toLocaleString("ko-KR") ?? "", typeName[r.type] || r.type, r.sid, r.name, r.amount, r.byName, r.memo, r.cancelled ? "Y" : "", r.balanceAfter].map(csvCell).join(","));
+    download(`거래내역_${new Date().toISOString().slice(0, 10)}.csv`, [head.join(","), ...lines].join("\n"));
+  });
+}
+
+/* ---- 학생 관리 ---- */
+async function mStudents(root) {
+  root.innerHTML = `
+    <div class="card"><h2>학생 일괄 등록</h2>
+      <p class="small muted">엑셀에서 <b>학번, 이름</b> 두 열을 복사해 붙여 넣으세요. 세 번째 열에 4자리 PIN을 넣으면 그 PIN을, 없으면 자동으로 만들어요. 선생님·외부인도 학번 대신 T01 같은 번호로 등록하면 돼요.</p>
+      <textarea id="bulk" placeholder="30101,김민준&#10;30102,이서연&#10;T01,박선생"></textarea>
+      <label>처음 지급할 금액</label><input id="init" inputmode="numeric" value="0">
+      <button class="block" id="reg" style="margin-top:12px">등록하기</button>
+      <div class="progress" id="rp" style="display:none"><div></div></div><div id="rmsg" class="small"></div></div>
+    <div class="card"><div class="row"><h2 style="margin:0">학생 목록</h2><button class="ghost sm" id="ref" style="flex:none">새로고침</button></div>
+      <input id="srch" placeholder="학번 또는 이름 검색" style="margin-top:10px">
+      <div id="tbl" style="margin-top:8px;max-height:60vh;overflow:auto"><p class="muted">불러오는 중…</p></div></div>`;
+  const draw = () => {
+    const k = $("#srch").value.trim();
+    const ws = (wallets || []).filter(w => !k || String(w.sid).includes(k) || String(w.name).includes(k));
+    $("#tbl").innerHTML = `<table><tr><th>학번</th><th>이름</th><th style="text-align:right">잔액</th></tr>
+      ${ws.map(w => `<tr class="click" data-tk="${w.token}"><td>${esc(w.sid)}</td><td>${esc(w.name)}</td><td style="text-align:right">${fmt(w.balance)}</td></tr>`).join("")}</table>
+      <p class="small muted">${ws.length}명</p>`;
+    $$("[data-tk]", root).forEach(tr => tr.onclick = () => studentModal(tr.dataset.tk, draw));
+  };
+  $("#srch").oninput = draw;
+  $("#ref").onclick = e => guard(e.target, async () => { await loadWallets(true); draw(); });
+  loadWallets().then(draw).catch(e => toast(errMsg(e), "bad"));
+
+  $("#reg").onclick = e => guard(e.target, async () => {
+    const init = toInt($("#init").value);
+    if (init < 0) throw new Error("처음 지급 금액은 0 이상이어야 해요");
+    const lines = $("#bulk").value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const existing = new Set((await loadWallets(true)).map(w => String(w.sid)));
+    const seen = new Set(), items = [], errs = [];
+    for (const l of lines) {
+      const [sid, name, pin] = l.split(/[,\t]/).map(s => (s || "").trim());
+      if (!sid || sid === "학번") continue;
+      if (!name) { errs.push(`${sid}: 이름 없음`); continue; }
+      if (existing.has(sid) || seen.has(sid)) { errs.push(`${sid}: 이미 등록됨/중복`); continue; }
+      if (pin && !/^\d{4}$/.test(pin)) { errs.push(`${sid}: PIN은 4자리 숫자`); continue; }
+      seen.add(sid); items.push({ sid, name, pin: pin || randPin() });
+    }
+    if (!items.length) throw new Error(errs.length ? errs.slice(0, 5).join(" / ") : "등록할 학생이 없어요");
+    if (!confirm(`${items.length}명을 등록할까요?${errs.length ? `\n(건너뜀 ${errs.length}건)` : ""}`)) return;
+    $("#rp").style.display = "block";
+    const PER = 100; // 학생 1명당 문서 4개 → 배치 400개
+    for (let i = 0; i < items.length; i += PER) {
+      const b = writeBatch(db);
+      for (const it of items.slice(i, i + PER)) {
+        const token = randToken(), key = await loginKey(it.sid, it.pin);
+        const lref = init > 0 ? doc(collection(db, "ledger")) : null;
+        b.set(doc(db, "wallets", token), { sid: it.sid, name: it.name, balance: init, loginKey: key, lastTx: lref ? lref.id : null,
+          recent: init > 0 ? [{ t: Date.now(), a: init, b: "지급", m: "초기 지급" }] : [], createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+        b.set(doc(db, "logins", key), { token });
+        b.set(doc(db, "pins", token), { sid: it.sid, name: it.name, pin: it.pin });
+        if (lref) b.set(lref, { type: "deposit", wallet: token, sid: it.sid, name: it.name, amount: init, by: me.uid, byName: me.name,
+          memo: "초기 지급", cancelled: false, balanceAfter: init, at: serverTimestamp() });
+      }
+      await b.commit();
+      $("#rp div").style.width = `${Math.min(100, (i + PER) / items.length * 100)}%`;
+    }
+    $("#rmsg").innerHTML = `✅ ${items.length}명 등록 완료. <b>카드 인쇄</b> 탭에서 QR·PIN 카드를 출력하세요.${errs.length ? `<br>건너뜀: ${esc(errs.join(", "))}` : ""}`;
+    $("#bulk").value = "";
+    await loadWallets(true); draw();
+  });
+}
+
+async function studentModal(token, redraw) {
+  const w = wallets.find(x => x.token === token); if (!w) return;
+  const m = modal(`
+    <div class="row"><div><div class="mid">${esc(w.name)}</div><div class="muted">${esc(w.sid)}</div></div>
+      <div style="text-align:right"><div class="small muted">잔액</div><div class="mid" id="mb">${money(w.balance)}</div></div></div>
+    <label>금액</label><input id="ma" inputmode="numeric" placeholder="0">
+    <label>메모</label><input id="mm" placeholder="예: 보상 지급">
+    <div class="grid2" style="margin-top:10px"><button class="okb" id="give">+ 지급</button><button class="danger" id="take">- 차감</button></div>
+    <h3>PIN</h3><div class="row"><div id="pinv" class="muted">••••</div><button class="ghost sm" id="showPin" style="flex:none">보기</button><button class="ghost sm" id="resetPin" style="flex:none">재설정</button></div>
+    <h3>QR</h3><div class="qrbox">${qrSvg(qrText(token), 4)}</div>
+    <div class="row" style="margin-top:16px"><button class="ghost" id="cls">닫기</button><button class="danger sm" id="del" style="flex:none">학생 삭제</button></div>`);
+  const act = sign => e => guard(e.target, async () => {
+    const a = toInt($("#ma", m).value); if (a <= 0) throw new Error("금액을 입력해 주세요");
+    const nb = await adjustTx(token, sign * a, $("#mm", m).value.trim() || (sign > 0 ? "관리자 지급" : "관리자 차감"));
+    w.balance = nb; $("#mb", m).textContent = money(nb); $("#ma", m).value = ""; toast("처리했어요", "ok"); redraw();
+  });
+  $("#give", m).onclick = act(1); $("#take", m).onclick = act(-1);
+  $("#cls", m).onclick = () => m.remove();
+  $("#showPin", m).onclick = e => guard(e.target, async () => {
+    const p = await getDoc(doc(db, "pins", token)); $("#pinv", m).textContent = p.exists() ? p.data().pin : "(기록 없음)";
+  });
+  $("#resetPin", m).onclick = e => guard(e.target, async () => {
+    if (!confirm("새 PIN을 만들까요? 기존 PIN은 쓸 수 없게 돼요.")) return;
+    const pin = randPin(), key = await loginKey(w.sid, pin);
+    const b = writeBatch(db);
+    if (w.loginKey) b.delete(doc(db, "logins", w.loginKey));
+    b.set(doc(db, "logins", key), { token });
+    b.set(doc(db, "pins", token), { sid: w.sid, name: w.name, pin });
+    b.update(doc(db, "wallets", token), { loginKey: key });
+    await b.commit(); w.loginKey = key; $("#pinv", m).textContent = pin; toast("PIN을 바꿨어요", "ok");
+  });
+  $("#del", m).onclick = e => guard(e.target, async () => {
+    if (!confirm(`${w.sid} ${w.name} 학생을 삭제할까요? 잔액도 사라져요.`)) return;
+    const b = writeBatch(db);
+    b.delete(doc(db, "wallets", token)); b.delete(doc(db, "pins", token)); if (w.loginKey) b.delete(doc(db, "logins", w.loginKey));
+    await b.commit(); wallets = wallets.filter(x => x.token !== token); m.remove(); redraw(); toast("삭제했어요");
+  });
+}
+
+/* ---- 일괄 지급 ---- */
+async function mGive(root) {
+  root.innerHTML = `<div class="card"><h2>일괄 지급 / 차감</h2>
+    <label>대상</label><select id="tg"><option value="all">전체</option><option value="prefix">학번이 ~로 시작하는 사람 (반별)</option></select>
+    <input id="pf" placeholder="예: 301 → 3학년 1반" style="margin-top:6px;display:none">
+    <label>금액 (차감은 앞에 - 붙이기)</label><input id="ga" inputmode="numeric" placeholder="예: 3000">
+    <label>메모</label><input id="gm" placeholder="예: 축제 기본 지급">
+    <button class="block" id="gg" style="margin-top:12px">실행</button>
+    <div class="progress" id="gp" style="display:none"><div></div></div><div id="gmsg" class="small"></div></div>`;
+  $("#tg").onchange = () => $("#pf").style.display = $("#tg").value === "prefix" ? "block" : "none";
+  $("#gg").onclick = e => guard(e.target, async () => {
+    const amt = toInt($("#ga").value); if (!amt) throw new Error("금액을 입력해 주세요");
+    const ws = await loadWallets(true);
+    const pf = $("#pf").value.trim();
+    const targets = $("#tg").value === "prefix" ? ws.filter(w => String(w.sid).startsWith(pf)) : ws;
+    if (!targets.length) throw new Error("대상이 없어요");
+    if (!confirm(`${targets.length}명에게 ${amt > 0 ? "지급" : "차감"} ${money(Math.abs(amt))} 할까요?`)) return;
+    const memo = $("#gm").value.trim() || (amt > 0 ? "일괄 지급" : "일괄 차감");
+    $("#gp").style.display = "block";
+    let done = 0, i = 0; const fails = [];
+    const worker = async () => { while (i < targets.length) { const w = targets[i++];
+      try { await adjustTx(w.token, amt, memo); } catch (err) { fails.push(`${w.sid}(${errMsg(err)})`); }
+      done++; $("#gp div").style.width = `${done / targets.length * 100}%`; $("#gmsg").textContent = `${done} / ${targets.length}`; } };
+    await Promise.all(Array.from({ length: 8 }, worker));
+    $("#gmsg").innerHTML = `✅ 완료 ${targets.length - fails.length}명${fails.length ? `<br>실패 ${fails.length}명: ${esc(fails.join(", "))}` : ""}`;
+    await loadWallets(true);
+  });
+}
+
+/* ---- 부스 계정 ---- */
+async function mBooths(root) {
+  root.innerHTML = `<div class="card"><h2>부스 계정 만들기</h2>
+    <p class="small muted">부스 폰에서는 <b>아이디 + 비밀번호</b>로 로그인해요. 부스 계정은 결제·자기 결제 취소만 할 수 있고, 돈을 지급할 수는 없어요.</p>
+    <label>아이디 (영문·숫자)</label><input id="bid" placeholder="예: booth1">
+    <label>비밀번호 (6자 이상)</label><input id="bpw" placeholder="예: sajik1234!">
+    <label>부스 이름 (학생 내역에 표시)</label><input id="bnm" placeholder="예: 1반 떡볶이">
+    <label>권한</label><select id="brl"><option value="booth">부스 (결제만)</option><option value="master">관리자 (모든 권한)</option></select>
+    <button class="block" id="bmk" style="margin-top:12px">만들기</button></div>
+    <div class="card"><h2>계정 목록</h2><div id="blist" class="muted">불러오는 중…</div></div>`;
+  const draw = async () => {
+    const snap = await getDocs(collection(db, "admins"));
+    const rows = snap.docs.map(d => ({ uid: d.id, ...d.data() })).sort((a, b) => (a.role === b.role ? 0 : a.role === "master" ? -1 : 1) || String(a.name).localeCompare(b.name, "ko", { numeric: true }));
+    $("#blist").innerHTML = `<ul class="list">${rows.map(r => `<li><div><div>${esc(r.name)} <span class="tag">${r.role === "master" ? "관리자" : "부스"}</span></div>
+      <div class="small muted">${esc(String(r.email || "").replace("@" + BOOTH_DOMAIN, ""))}</div></div>
+      ${r.uid === me.uid ? `<span class="small muted">나</span>` : `<button class="ghost sm" data-del="${r.uid}">권한 삭제</button>`}</li>`).join("")}</ul>`;
+    $$("[data-del]", root).forEach(b => b.onclick = () => guard(b, async () => {
+      if (!confirm("이 계정의 권한을 없앨까요? (다시 쓰려면 새로 만들어야 해요)")) return;
+      await deleteDoc(doc(db, "admins", b.dataset.del)); toast("삭제했어요"); draw();
+    }));
+  };
+  draw().catch(e => toast(errMsg(e), "bad"));
+  $("#bmk").onclick = e => guard(e.target, async () => {
+    const id = $("#bid").value.trim(), pw = $("#bpw").value, nm = $("#bnm").value.trim(), role = $("#brl").value;
+    if (!/^[a-zA-Z0-9._-]+(@.+)?$/.test(id)) throw new Error("아이디는 영문·숫자로 입력해 주세요");
+    if (!nm) throw new Error("부스 이름을 입력해 주세요");
+    const email = id.includes("@") ? id : `${id}@${BOOTH_DOMAIN}`;
+    const sec = initializeApp(firebaseConfig, "sec" + Date.now());
+    try {
+      const sa = getAuth(sec);
+      const cred = await createUserWithEmailAndPassword(sa, email, pw);
+      await setDoc(doc(db, "admins", cred.user.uid), { role, name: nm, email, createdAt: serverTimestamp() });
+      await signOut(sa);
+    } finally { await deleteApp(sec); }
+    toast(`${nm} 계정을 만들었어요`, "ok");
+    $("#bid").value = $("#bpw").value = $("#bnm").value = ""; draw();
+  });
+}
+
+/* ---- 카드 인쇄 ---- */
+async function mPrint(root) {
+  root.innerHTML = `<div class="card"><h2>QR·PIN 카드 인쇄</h2>
+    <p class="small muted">A4 한 장에 12장씩 나와요. 잘라서 학생에게 나눠 주세요. 카드를 잃어버리면 학생 탭에서 PIN 재설정 후 다시 인쇄하면 돼요.</p>
+    <label>대상 (비우면 전체, 예: 301)</label><input id="ppf" placeholder="학번 앞자리">
+    <div class="row" style="margin-top:12px"><button id="pgo">인쇄하기</button><button class="ghost" id="pcsv">PIN 명단 CSV</button></div></div>`;
+  const getRows = async () => {
+    const [ws, ps] = await Promise.all([loadWallets(true), getDocs(collection(db, "pins"))]);
+    const pins = Object.fromEntries(ps.docs.map(d => [d.id, d.data().pin]));
+    const pf = $("#ppf").value.trim();
+    return ws.filter(w => !pf || String(w.sid).startsWith(pf)).map(w => ({ ...w, pin: pins[w.token] || "????" }));
+  };
+  $("#pgo").onclick = e => guard(e.target, async () => {
+    const rows = await getRows(); if (!rows.length) throw new Error("대상이 없어요");
+    $("#print").innerHTML = `<div class="pcards">${rows.map(r => `<div class="pcard"><div class="app">${esc(APP_NAME)}</div>
+      ${qrSvg(qrText(r.token), 3)}<div class="nm">${esc(r.sid)} ${esc(r.name)}</div><div class="pin">PIN <b>${esc(r.pin)}</b></div></div>`).join("")}</div>`;
+    setTimeout(() => window.print(), 300);
+  });
+  $("#pcsv").onclick = e => guard(e.target, async () => {
+    const rows = await getRows();
+    download("PIN명단.csv", ["학번,이름,PIN", ...rows.map(r => [r.sid, r.name, r.pin].map(csvCell).join(","))].join("\n"));
+  });
+}
+</script>
+</body>
+</html>
