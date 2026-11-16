@@ -409,20 +409,55 @@ function loadScript(src) {
     document.head.appendChild(s);
   });
 }
+const QR_LIBS = ["https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js",
+                 "https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"];
+async function loadQrLib() {
+  if (window.Html5Qrcode) return;
+  let last;
+  for (const src of QR_LIBS) {
+    try {
+      await Promise.race([loadScript(src), new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 8000))]);
+      if (window.Html5Qrcode) return;
+    } catch (e) { last = e; }
+  }
+  throw new Error("스캐너 프로그램을 불러오지 못했어요. 인터넷 연결을 확인해 주세요");
+}
+const inAppBrowser = () => /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\//i.test(navigator.userAgent);
+function cameraErrText(err) {
+  const s = String(err?.name || "") + " " + String(err?.message || err || "");
+  if (inAppBrowser()) return "카카오톡·네이버 등 앱 안에서 열면 카메라가 안 돼요. 오른쪽 위 메뉴 → '다른 브라우저로 열기'(크롬·사파리)로 열어 주세요.";
+  if (!window.isSecureContext) return "주소가 https://로 시작해야 카메라를 쓸 수 있어요.";
+  if (/NotAllowed|Permission/i.test(s)) return "카메라 권한이 거부됐어요. 주소창 왼쪽 자물쇠(또는 aA) → 카메라 '허용' 후 새로고침해 주세요.";
+  if (/NotFound|Requested device not found|no camera/i.test(s)) return "이 기기에서 카메라를 찾지 못했어요. 아래 '사진으로 스캔'이나 학번+PIN을 써 주세요.";
+  if (/NotReadable|in use|Could not start/i.test(s)) return "다른 앱이 카메라를 쓰고 있어요. 카메라 앱을 닫고 다시 눌러 주세요.";
+  return "카메라를 켜지 못했어요: " + s.trim();
+}
 async function startScanner(el, onText) {
-  await loadScript("https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js");
+  await loadQrLib();
   await stopScanner();
-  scanner = new Html5Qrcode(el.id);
+  const s = new Html5Qrcode(el.id);
   let fired = false;
-  await scanner.start({ facingMode: "environment" }, { fps: 12, qrbox: { width: 230, height: 230 } }, txt => {
-    if (fired) return; fired = true;
-    if (navigator.vibrate) navigator.vibrate(60);
-    stopScanner().then(() => onText(txt));
-  }, () => {});
+  try {
+    await s.start({ facingMode: "environment" }, { fps: 12, qrbox: { width: 230, height: 230 } }, txt => {
+      if (fired) return; fired = true;
+      if (navigator.vibrate) navigator.vibrate(60);
+      stopScanner().then(() => onText(txt));
+    }, () => {});
+  } catch (e) { try { s.clear(); } catch {} throw e; }
+  scanner = s;
 }
 async function stopScanner() {
   const s = scanner; scanner = null;
   if (s) { try { await s.stop(); } catch {} try { s.clear(); } catch {} }
+}
+async function scanImageFile(file) {
+  await loadQrLib();
+  let box = document.getElementById("qrFileBox");
+  if (!box) { box = document.createElement("div"); box.id = "qrFileBox"; box.style.display = "none"; document.body.appendChild(box); }
+  const h = new Html5Qrcode("qrFileBox");
+  try { return await h.scanFile(file, false); }
+  catch { throw new Error("사진에서 QR을 찾지 못했어요. QR이 화면 가운데 크게 나오게 다시 찍어 주세요"); }
+  finally { try { h.clear(); } catch {} }
 }
 
 function renderPayPanel(root) {
@@ -430,16 +465,37 @@ function renderPayPanel(root) {
     <div class="card" id="payStep">
       <h2>결제할 학생 찾기</h2>
       <button class="block" id="scanBtn">📷 QR 스캔</button>
+      <div id="scanMsg" class="small" style="margin-top:8px"></div>
       <div id="reader" style="margin-top:10px"></div>
+      <label class="sec" style="display:block;text-align:center;margin-top:8px;padding:12px;border-radius:12px;background:var(--pri2);color:var(--pri);font-weight:600;font-size:15px;cursor:pointer">
+        🖼 카메라가 안 되면: 사진 찍어서 스캔<input id="qrFile" type="file" accept="image/*" capture="environment" style="display:none"></label>
       <h3>QR이 없을 때 — 학번 + PIN</h3>
       <div class="row"><input id="msid" inputmode="numeric" placeholder="학번"><input id="mpin" type="password" inputmode="numeric" maxlength="4" placeholder="PIN"></div>
       <button class="block sec" id="manBtn" style="margin-top:8px">학번으로 찾기</button>
     </div>`;
+  const msg = (t, bad) => { const m = $("#scanMsg"); if (m) { m.textContent = t; m.style.color = bad ? "var(--bad)" : "var(--muted)"; } };
+  if (inAppBrowser()) msg(cameraErrText(), true);
+  loadQrLib().catch(() => {}); // 미리 불러오기
+  let busy = false;
   $("#scanBtn").onclick = async e => {
-    if (scanner) { await stopScanner(); e.target.textContent = "📷 QR 스캔"; return; }
-    e.target.textContent = "스캔 중지";
-    try { await startScanner($("#reader"), txt => openPay(root, parseQr(txt))); }
-    catch (err) { e.target.textContent = "📷 QR 스캔"; toast("카메라를 열 수 없어요. 권한·HTTPS 주소인지 확인해 주세요", "bad"); console.error(err); }
+    const b = e.target;
+    if (busy) return;
+    if (scanner) { await stopScanner(); b.textContent = "📷 QR 스캔"; msg(""); return; }
+    busy = true; b.textContent = "카메라 켜는 중…"; msg("처음이면 카메라 권한을 물어봐요. '허용'을 눌러 주세요.");
+    try {
+      await startScanner($("#reader"), txt => openPay(root, parseQr(txt)));
+      b.textContent = "스캔 중지"; msg("QR을 네모 칸 안에 맞춰 주세요.");
+    } catch (err) {
+      console.error(err); b.textContent = "📷 QR 스캔"; msg(cameraErrText(err), true);
+    } finally { busy = false; }
+  };
+  $("#qrFile").onchange = async e => {
+    const f = e.target.files?.[0]; e.target.value = "";
+    if (!f) return;
+    await stopScanner(); $("#scanBtn").textContent = "📷 QR 스캔";
+    msg("사진에서 QR을 찾는 중…");
+    try { const txt = await scanImageFile(f); msg(""); openPay(root, parseQr(txt)); }
+    catch (err) { msg(err.message, true); }
   };
   $("#manBtn").onclick = e => guard(e.target, async () => {
     const sid = $("#msid").value.trim(), pin = $("#mpin").value.trim();
